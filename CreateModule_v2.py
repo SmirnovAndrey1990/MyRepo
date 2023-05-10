@@ -1260,11 +1260,13 @@ class Create_Module():
             self.model_ele_list.extend(self.fixture_elements)
 
     def create_python_part(self, build_ele):
-
+        attr_list = []
+        #mass = "Масса"
+        #attr_list.append(AllplanBaseElements.AttributeString(507, mass))
         views = [View2D3D (self.model_ele_list)]
         pythonpart = PythonPart("Module", parameter_list = self.build_ele.get_params_list(), hash_value = self.build_ele.get_hash(),
                                 python_file = self.build_ele.pyp_file_name, views = views, fixture_elements = self.fixture_elements,
-                                library_elements = self.library_ele_list)
+                                library_elements = self.library_ele_list, attribute_list = attr_list)
         #library_elements = self.library_ele_list
         self.model_ele_list = pythonpart.create()
             
@@ -1365,6 +1367,7 @@ class Create_Wall():
             self.create_handle(self.wall_offset[0], self.wall_offset[1], self.orient_params1)
             self.create_handle(self.wall[3], self.wall[4], self.orient_params)
             self.create_handle(self.wall[0] + self.wall[3], self.wall[2], self.orient_params, self.wall[3])
+
         self.model_ele_list.append(AllplanBasisElements.ModelElement3D(self.com_prop, wall))
 
     def create_wall_with_cent_pylon(self):
@@ -1502,6 +1505,7 @@ class Create_Wall():
 
     def create_insulation(self, fir_open, sec_open, thi_open, fir_sect_wall, sec_sect_wall, wall_length, start_point, end_point, offset, insul_type, num):  
         insul_list = []
+        reinf_list = []
         fill_list = []
 
         fir_open = [0 if not fir_open[0] else i for i in fir_open]
@@ -1609,6 +1613,20 @@ class Create_Wall():
                 sect_posit6 = elem[3] + elem[1] + self.open_ver_rib_thick
                 fill_sect6 = wall_length + offset - end_point - elem[3] - elem[1]
                 fill_posit6 = elem[3] + elem[1]
+
+        #fir_rib_reinforcement = Create_Rib_Reinforcement(section1, self.wall[1], sect_posit1, self.slab_thick, self.ver_rib_thick, self.insul[1])
+        #reinf_list.extend(fir_rib_reinforcement.create_reinforcement(num))
+        #sec_rib_reinforcement = Create_Rib_Reinforcement(section2, self.wall[1], sect_posit2, self.slab_thick, self.ver_rib_thick, self.insul[1])
+        #reinf_list.extend(sec_rib_reinforcement.create_reinforcement(num+2000))
+        #thi_rib_reinforcement = Create_Rib_Reinforcement(section3, self.wall[1], sect_posit3, self.slab_thick, self.ver_rib_thick, self.insul[1])
+        #reinf_list.extend(thi_rib_reinforcement.create_reinforcement(num+4000))
+        #fou_rib_reinforcement = Create_Rib_Reinforcement(section4, self.wall[1], sect_posit4, self.slab_thick, self.ver_rib_thick, self.insul[1])
+        #reinf_list.extend(fou_rib_reinforcement.create_reinforcement(num+6000))
+        #fif_rib_reinforcement = Create_Rib_Reinforcement(section5, self.wall[1], sect_posit5, self.slab_thick, self.ver_rib_thick, self.insul[1])
+        #reinf_list.extend(fif_rib_reinforcement.create_reinforcement(num+8000))
+        #six_rib_reinforcement = Create_Rib_Reinforcement(section6, self.wall[1], sect_posit6, self.slab_thick, self.ver_rib_thick, self.insul[1])
+        #reinf_list.extend(six_rib_reinforcement.create_reinforcement(num+10000))
+        #self.fixture_elements.extend(i for i in reinf_list)
 
         if self.insul[0]:
             fir_ver_insulation = Create_Insulation(self.rib_wall_height, section1, sect_posit1, self.slab_thick, self.hor_rib_thick, self.ver_rib_thick, self.insul)
@@ -2251,6 +2269,7 @@ class Create_Insulation():
         self.com_prop = AllplanBaseElements.CommonProperties()
         self.com_prop.GetGlobalProperties()
         self.com_prop.ColorByLayer = False
+        self.com_prop.ActiveBackground = True
         self.com_prop.Layer = 3922
         self.com_prop.Pen = 7 
         self.com_prop.Color = 4
@@ -2460,7 +2479,7 @@ class Create_Insulation():
         insul_slides = []
 
         insul_list = [AllplanBasisElements.ModelElement3D(self.com_prop, insul)]
-        
+
         insul_slide_prop_3d = AllplanPrecast.FixtureSlideProperties()
         insul_slide_prop_3d.ViewType = AllplanPrecast.FixtureSlideViewType.e3D_VIEW
         insul_slides.append(AllplanPrecast.FixtureSlideElement(insul_slide_prop_3d, insul_list))    
@@ -2519,7 +2538,7 @@ class Create_Insulation():
         insul_fixture_place = AllplanPrecast.FixturePlacementElement(self.com_prop, insul_fixture_place_prop, insul_fixture)
         insul_fixture_place.SetAttributes(attributes)
         return insul_fixture_place
-
+    
     @staticmethod
     def create_fill(fill_length, fill_thick, fill_start_point, create_filling):
         if fill_length <= 0 or not create_filling:
@@ -2544,21 +2563,215 @@ class Create_Insulation():
         return AllplanBasisElements.FillingElement(com_prop, props, polygon)
  
 
-    def create_ribb_reinf(self, orient_params, wall_thick):
-        library_ele_list = []
-        #num_z_step = self.wall_height // (self.insul[1] + self.hor_rib_thick)
+class Create_Rib_Reinforcement():
+    def __init__(self, wall_length, wall_thick, start_point, z_start_point, ver_rib_thick, insul_width):
+        self.wall_length = wall_length
+        self.wall_thick = wall_thick
+        self.insul_width = insul_width
+        self.ver_rib_thick = ver_rib_thick
+        self.long_bar_diameter = 10
+        self.trans_bar_diameter = 8
+        self.long_bar_length = 2000
+        self.cent_distance = 60
+        self.start_point = start_point
+        self.z_start_point = z_start_point
 
-        placement_mat = RotationAngles(0, 0, orient_params[3]).get_rotation_matrix()
+        self.com_prop = AllplanBaseElements.CommonProperties()
+        self.com_prop.GetGlobalProperties()
+        self.com_prop.ColorByLayer = False
+        self.com_prop.Layer = 3922
+        self.com_prop.Pen = 7 
+        self.com_prop.Color = 4
 
-        placement_mat.SetTranslation(AllplanGeo.Vector3D(1000 * m.cos(m.radians(orient_params[3])) + orient_params[1] * m.sin(m.radians(orient_params[3])), 1000 * m.sin(m.radians(orient_params[3])) + orient_params[2] * m.cos(m.radians(orient_params[3])), self.wall_height))
+        self.com_prop1 = AllplanBaseElements.CommonProperties()
+        self.com_prop1.GetGlobalProperties()
+        self.com_prop1.ColorByLayer = False
+        self.com_prop1.Layer = 3922
+        self.com_prop1.Pen = 11 
+        self.com_prop1.Color = 1
+            
+    def create_reinforcement(self, num):
+        x_offset = 0
+        y_offset = 0
+        reinf_fix_list = []
+        if self.wall_length <= 0:
+            return reinf_fix_list
 
-        if wall_thick == 160:
-            lib_ele_prop = AllplanBasisElements.LibraryElementProperties(AllplanSettings.AllplanPaths.GetStdPath(), 'Каркасы вертикальные (стены)', 'К-6(10/6)15', AllplanBasisElements.LibraryElementType.eFixture, placement_mat)
-        else:
-            return library_ele_list
+        bar_list = []   
+        line_list = []
 
-        library_ele_list.append(AllplanBasisElements.LibraryElement(lib_ele_prop))
-        return library_ele_list
+        base_pol = AllplanGeo.Polygon3D()
+        base_pol += AllplanGeo.Point3D(-self.long_bar_diameter/2, 0, 0)
+        base_pol += AllplanGeo.Point3D(0, self.long_bar_diameter/2, 0)
+        base_pol += AllplanGeo.Point3D(self.long_bar_diameter/2, 0, 0)
+        base_pol += AllplanGeo.Point3D(0, -self.long_bar_diameter/2, 0)
+        base_pol += AllplanGeo.Point3D(-self.long_bar_diameter/2, 0, 0)
+
+        path = AllplanGeo.Polyline3D()
+        path += AllplanGeo.Point3D(0, 0, 0)
+        path += AllplanGeo.Point3D(0, 0, self.long_bar_length)
+
+        err, bar1 = AllplanGeo.CreatePolyhedron(base_pol, path)
+
+        line = AllplanGeo.Polyline3D()
+        line += AllplanGeo.Point3D(0, 0, 0)
+        line += AllplanGeo.Point3D(0, 0, self.long_bar_length)
+
+        num_x_step = self.wall_length // (self.insul_width + self.ver_rib_thick)
+        x_resid = self.wall_length % (self.insul_width + self.ver_rib_thick)
+        if x_resid >= 200:
+            num_x_step += 1
+
+        for i in range(1, int(num_x_step)):             
+            bar1_i = AllplanGeo.Move(bar1, AllplanGeo.Vector3D(self.start_point + i * (self.insul_width + self.ver_rib_thick) - 0.5 * self.ver_rib_thick + x_offset,
+                                                                 y_offset, self.z_start_point))
+            bar2_i = AllplanGeo.Move(bar1, AllplanGeo.Vector3D(self.start_point + i * (self.insul_width + self.ver_rib_thick) - 0.5 * self.ver_rib_thick + x_offset,
+                                                                 y_offset + self.cent_distance, self.z_start_point))
+            bar_list.append([bar1_i, bar2_i]) 
+
+        for i in range(1, int(num_x_step)):             
+            line_i = AllplanGeo.Move(line, AllplanGeo.Vector3D(self.start_point + i * (self.insul_width + self.ver_rib_thick) - 0.5 * self.ver_rib_thick + x_offset,
+                                                                 y_offset, self.z_start_point))
+            line_list.append(line_i) 
+        
+        for bars, line in zip(bar_list, line_list):
+            reinf_fix_list. append(self.create_reinf_group_fixture(bars, line, num))
+            num += 1
+        return reinf_fix_list
+
+
+    def create_reinf_group_fixture(self, bars, line, num):       
+        attr_list = []
+        attr_set_list = []
+        
+        name = "К-6(10/6)15"
+        answer1 = "ПМ-К-2022 л.5"
+        answer5 = "6/0,133"
+        answer4 = "10/1,234"
+        mass_v6 = 1.367
+
+        if self.wall_thick == 160:
+            if self.long_bar_diameter == 12:
+                name = "К-6(12/6)15"
+                answer4 = "12/1,776"
+                mass_v6 = 1.909
+        elif self.wall_thick == 180:
+            answer5 = "6/0,160"
+            if self.long_bar_diameter == 10:              
+                name = "К-8(10/6)15"
+                answer1 = "ПМ-К-2022 л.3"
+                answer4 = "10/1,234"
+                mass_v6 = 1.394
+            elif self.long_bar_diameter == 12:              
+                name = "К-8(12/6)15"
+                answer1 = "ПМ-К-2022 л.4"
+                answer4 = "12/1,776"
+                mass_v6 = 1.936
+        
+        location = AllplanGeo.Point3D(0, 0, 0)
+        symbol_prop = AllplanBasisElements.Symbol3DProperties()
+        symbol_prop.SymbolID = 1
+        symbol_prop.Height = 1
+        symbol_prop.Width = 1
+        symbol_list = [AllplanBasisElements.Symbol3DElement(self.com_prop, symbol_prop, location)]
+
+        slide_sym_prop = AllplanPrecast.FixtureSlideProperties()
+        slide_sym_prop.ViewType = AllplanPrecast.FixtureSlideViewType.eCONNECTION_POINT
+        slide_list = [AllplanPrecast.FixtureSlideElement(slide_sym_prop, symbol_list)]    
+              
+        fix_macro_grp_prop = AllplanPrecast.FixtureProperties()
+        fix_macro_grp_prop.Type = AllplanPrecast.MacroType.eGroup_Fixture 
+        fix_macro_grp = AllplanPrecast.FixtureElement(fix_macro_grp_prop, slide_list)
+        fix_macro_grp.SetHash(hashlib.sha224(str(fix_macro_grp).encode('utf-8')).hexdigest())
+         
+        fixture_grp_pl_prop = AllplanPrecast.FixturePlacementProperties()
+        fixture_grp_pl_prop.Name = name + str(num)
+        fixtureGrp = AllplanPrecast.FixturePlacementElement(self.com_prop, fixture_grp_pl_prop, fix_macro_grp)
+   
+        attr_list.append(AllplanBaseElements.AttributeInteger(1013, 0))
+        attr_set_list.append(AllplanBaseElements.AttributeSet(attr_list))
+        attributes = AllplanBaseElements.Attributes(attr_set_list)
+       
+        group_list = [fixtureGrp]
+        group_list.append(self.create_fir_reinf_fixture([bars[0], bars[1]], name, num))
+        group_list.append(self.create_sec_reinf_fixture(line, name, answer1, answer4, answer5, mass_v6, num))
+
+        fixture_grp_prop = AllplanPrecast.FixtureGroupProperties()
+        fixture_grp_prop.Name = name
+        group = AllplanPrecast.FixtureGroupElement(fixture_grp_prop, group_list)
+        group.SetAttributes(attributes)
+        return group
+
+    def create_fir_reinf_fixture(self, bars, name, num):
+        attr_list = []
+        attr_set_list = []
+        bar_list = []
+        bar_slides = []
+  
+        bar_list.append(AllplanBasisElements.ModelElement3D(self.com_prop, bars[0]))
+        bar_list.append(AllplanBasisElements.ModelElement3D(self.com_prop, bars[1]))
+        
+        bar_slide_prop_3d = AllplanPrecast.FixtureSlideProperties()
+        bar_slide_prop_3d.ViewType = AllplanPrecast.FixtureSlideViewType.e3D_VIEW
+        bar_slides.append(AllplanPrecast.FixtureSlideElement(bar_slide_prop_3d, bar_list))    
+            
+        bar_fixture_prop = AllplanPrecast.FixtureProperties()
+        bar_fixture_prop.Type = AllplanPrecast.MacroType.ePoint_Fixture
+        bar_fixture_prop.Name = name + "_тело" + str(num)     
+        bar_fixture = AllplanPrecast.FixtureElement(bar_fixture_prop, bar_slides)
+        bar_fixture.SetHash(hashlib.sha224(str(bar_fixture).encode('utf-8')).hexdigest())
+
+        bar_fixture_place_prop = AllplanPrecast.FixturePlacementProperties()
+        bar_fixture_place_prop.Name = name + "_тело"
+        bar_fixture_place_prop.ConnectionToAIACatalog = True
+        
+        attr_list.append(AllplanBaseElements.AttributeString(1332, "К-10/6_ТОЧ"))
+        attr_list.append(AllplanBaseElements.AttributeInteger(1013, 216))
+        attr_set_list.append(AllplanBaseElements.AttributeSet(attr_list))
+        attributes = AllplanBaseElements.Attributes(attr_set_list)
+        
+        bar_fixture_place = AllplanPrecast.FixturePlacementElement(self.com_prop, bar_fixture_place_prop, bar_fixture)
+        bar_fixture_place.SetAttributes(attributes)
+        return bar_fixture_place
+
+    def create_sec_reinf_fixture(self, line, name, answer1, answer4, answer5, mass_v6, num):    
+        bar_slides = []
+        attr_list = []
+        attr_set_list = []
+
+        line_list =[(AllplanBasisElements.ModelElement3D(self.com_prop, line))]
+
+        bar_slide_prop_3d = AllplanPrecast.FixtureSlideProperties()
+        bar_slide_prop_3d.ViewType = AllplanPrecast.FixtureSlideViewType.e3D_VIEW
+        bar_slides.append(AllplanPrecast.FixtureSlideElement(bar_slide_prop_3d, line_list))   
+
+        bar_fixture_prop = AllplanPrecast.FixtureProperties()
+        bar_fixture_prop.Type = AllplanPrecast.MacroType.eLine_Fixture
+        bar_fixture_prop.Name = name + str(num) 
+        bar_fixture = AllplanPrecast.FixtureElement(bar_fixture_prop, bar_slides)
+        bar_fixture.SetHash(hashlib.sha224(str(bar_fixture).encode('utf-8')).hexdigest())
+
+        bar_fixture_place_prop = AllplanPrecast.FixturePlacementProperties()
+        bar_fixture_place_prop.Name = name
+        bar_fixture_place_prop.Mass_V6 = mass_v6
+        bar_fixture_place_prop.ConnectionToAIACatalog = True
+        
+        attr_list.append(AllplanBaseElements.AttributeString(812, "К"))
+        attr_list.append(AllplanBaseElements.AttributeString(813, answer1))
+        attr_list.append(AllplanBaseElements.AttributeString(816, answer4))
+        attr_list.append(AllplanBaseElements.AttributeString(817, answer5))
+
+        attr_list.append(AllplanBaseElements.AttributeString(1332, "К-10/6_ЛИН"))
+        attr_list.append(AllplanBaseElements.AttributeInteger(1013, 215))
+        attr_set_list.append(AllplanBaseElements.AttributeSet(attr_list))
+        attributes = AllplanBaseElements.Attributes(attr_set_list)
+        
+        bar_fixture_place = AllplanPrecast.FixturePlacementElement(self.com_prop, bar_fixture_place_prop, bar_fixture)
+        bar_fixture_place.SetAttributes(attributes)
+        return bar_fixture_place
+
+
+
 
 
 
