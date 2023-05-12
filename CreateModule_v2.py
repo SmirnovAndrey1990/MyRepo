@@ -1680,6 +1680,9 @@ class Create_Wall():
             thi_up_hor_insulation = Create_Insulation(self.rib_wall_height - thi_open[4] - thi_open[2] - self.open_hor_rib_thick + self.slab_thick, thi_open[1], thi_open[3], thi_open[4] + thi_open[2] + self.open_hor_rib_thick, self.hor_rib_thick, self.ver_rib_thick, self.insul)
             insul_list.extend(thi_up_hor_insulation.create_hor_insulation(insul_type, num+22000))
 
+            self.insul_volume = self.insul_volume + fir_ver_insulation.insul_volume + sec_ver_insulation.insul_volume + thi_ver_insulation.insul_volume + fou_ver_insulation.insul_volume + fif_ver_insulation.insul_volume + six_ver_insulation.insul_volume + \
+                                fir_low_hor_insulation.insul_volume + sec_low_hor_insulation.insul_volume + thi_low_hor_insulation.insul_volume + fir_up_hor_insulation.insul_volume + sec_up_hor_insulation.insul_volume + thi_up_hor_insulation.insul_volume
+
         if self.create_filling:
             fill_list.append(Create_Insulation.create_fill(fill_sect1, self.wall[1], fill_posit1, self.create_filling))
             fill_list.append(Create_Insulation.create_fill(fill_sect2, self.wall[1], fill_posit2, self.create_filling))
@@ -1695,9 +1698,6 @@ class Create_Wall():
             self.create_handle(fir_sect_wall[2], fir_sect_wall[3], self.orient_params)
         if sec_sect_wall[0]:
             self.create_handle(sec_sect_wall[2], sec_sect_wall[3], self.orient_params)
-
-        self.insul_volume = self.insul_volume + fir_ver_insulation.insul_volume + sec_ver_insulation.insul_volume + thi_ver_insulation.insul_volume + fou_ver_insulation.insul_volume + fif_ver_insulation.insul_volume + six_ver_insulation.insul_volume + \
-                            fir_low_hor_insulation.insul_volume + sec_low_hor_insulation.insul_volume + thi_low_hor_insulation.insul_volume + fir_up_hor_insulation.insul_volume + sec_up_hor_insulation.insul_volume + thi_up_hor_insulation.insul_volume
 
     def create_handle(self, handle_end_point, handle_name, orient_params, handle_origin_point=0):
         origin = AllplanGeo.Point3D(handle_origin_point * m.cos(m.radians(orient_params[3])) + orient_params[1], handle_origin_point * m.sin(m.radians(orient_params[3])) + orient_params[2], 0)
