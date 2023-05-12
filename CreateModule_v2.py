@@ -65,6 +65,8 @@ class Create_Module():
         self.python_part = build_ele.CreatePythonPart.value
         self.wall_offset = [None, None]
         self.orient_params = [None, None, None, None]
+        
+        self.wall_mass = 0
 
         #-----------------------------------------------------------FIRST WALL----------------------------------------------------------------------
         self.create_wall1 = build_ele.CreateWall1.value
@@ -979,6 +981,9 @@ class Create_Module():
         self.hor_rib_thick10, self.ver_rib_thick10  = build_ele.HorRibThick10.value, build_ele.VerRibThick10.value
         self.open_hor_rib_thick10, self.open_ver_rib_thick10 = build_ele.OpenHorRibThick10.value, build_ele.OpenVerRibThick10.value
 
+
+
+
     def create_wall(self):
         #-----------------------------------------------------------CREATE FIRST WALL---------------------------------------------------------------
         if self.create_wall1:             
@@ -1007,7 +1012,8 @@ class Create_Module():
             line += AllplanGeo.Point3D(0, 0, 0)
             line += AllplanGeo.Point3D(self.build_ele.ModuleLength.value, self.build_ele.ModuleWidth.value, 0)
             self.model_ele_list.append(AllplanBasisElements.ModelElement3D(com_prop, line))
-       
+            self.wall_mass += wall1.calculate_mass()
+            
         #-----------------------------------------------------------CREATE SECOND WALL--------------------------------------------------------------
         if self.create_wall2:             
             wall2 = Create_Wall(self.build_ele, self.slab_thick, self.module_type, self.wall2, self.wall_offset, self.orient_params2, self.orient_params, self.left_end2, self.right_end2, 
@@ -1031,6 +1037,7 @@ class Create_Module():
             self.model_ele_list.extend(wall2.model_ele_list)
             self.fixture_elements.extend(wall2.fixture_elements)
             self.library_ele_list.extend(wall2.library_ele_list)
+            self.wall_mass += wall2.calculate_mass()
 
         #-----------------------------------------------------------CREATE THIRD WALL---------------------------------------------------------------
         if self.create_wall3:             
@@ -1055,6 +1062,7 @@ class Create_Module():
             self.library_ele_list.extend(wall3.library_ele_list)
             if self.create_handle == True:
                 self.handle_list.extend(wall3.handle_list)
+            self.wall_mass += wall3.calculate_mass()
 
         #-----------------------------------------------------------CREATE FOURTH WALL--------------------------------------------------------------
         if self.create_wall4:             
@@ -1079,6 +1087,7 @@ class Create_Module():
             self.library_ele_list.extend(wall4.library_ele_list)
             if self.create_handle == True:
                 self.handle_list.extend(wall4.handle_list)
+            self.wall_mass += wall4.calculate_mass()
 
         #-----------------------------------------------------------CREATE FIFTH WALL--------------------------------------------------------------
         if self.create_wall5:             
@@ -1108,6 +1117,7 @@ class Create_Module():
             self.library_ele_list.extend(wall5.library_ele_list)
             if self.create_handle == True:
                 self.handle_list.extend(wall5.handle_list)
+            self.wall_mass += wall5.calculate_mass()
 
         #-----------------------------------------------------------CREATE SIXTH WALL--------------------------------------------------------------
         if self.create_wall6:             
@@ -1137,6 +1147,7 @@ class Create_Module():
             self.library_ele_list.extend(wall6.library_ele_list)
             if self.create_handle == True:
                 self.handle_list.extend(wall6.handle_list)
+            self.wall_mass += wall6.calculate_mass()
 
         #-----------------------------------------------------------CREATE SEVENTH WALL--------------------------------------------------------------
         if self.create_wall7:             
@@ -1166,6 +1177,7 @@ class Create_Module():
             self.library_ele_list.extend(wall7.library_ele_list)
             if self.create_handle == True:
                 self.handle_list.extend(wall7.handle_list)
+            self.wall_mass += wall7.calculate_mass()
 
         #-----------------------------------------------------------CREATE EIGHTH WALL--------------------------------------------------------------
         if self.create_wall8:             
@@ -1195,6 +1207,7 @@ class Create_Module():
             self.library_ele_list.extend(wall8.library_ele_list)
             if self.create_handle == True:
                 self.handle_list.extend(wall8.handle_list)
+            self.wall_mass += wall8.calculate_mass()
 
         #-----------------------------------------------------------CREATE NINTH WALL--------------------------------------------------------------
         if self.create_wall9:             
@@ -1224,6 +1237,7 @@ class Create_Module():
             self.library_ele_list.extend(wall9.library_ele_list)
             if self.create_handle == True:
                 self.handle_list.extend(wall9.handle_list)
+            self.wall_mass += wall9.calculate_mass()
 
         #-----------------------------------------------------------CREATE TENTH WALL--------------------------------------------------------------
         if self.create_wall10:             
@@ -1253,6 +1267,7 @@ class Create_Module():
             self.library_ele_list.extend(wall10.library_ele_list)
             if self.create_handle == True:
                 self.handle_list.extend(wall10.handle_list)
+            self.wall_mass += wall10.calculate_mass()
 
         if self.python_part:
             self.create_python_part(self.build_ele)
@@ -1260,9 +1275,7 @@ class Create_Module():
             self.model_ele_list.extend(self.fixture_elements)
 
     def create_python_part(self, build_ele):
-        attr_list = []
-        #mass = "Масса"
-        #attr_list.append(AllplanBaseElements.AttributeString(507, mass))
+        attr_list = [AllplanBaseElements.AttributeDouble(216, self.wall_mass)]
         views = [View2D3D (self.model_ele_list)]
         pythonpart = PythonPart("Module", parameter_list = self.build_ele.get_params_list(), hash_value = self.build_ele.get_hash(),
                                 python_file = self.build_ele.pyp_file_name, views = views, fixture_elements = self.fixture_elements,
@@ -1293,6 +1306,8 @@ class Create_Wall():
         
         self.floor_height = build_ele.FloorHeight.value
         self.wall_height = self.floor_height - 10
+        if self.module_type == "Для малоэтажных зданий":
+            self.wall_height -= 10
         self.rib_wall_height = self.wall_height - 300 - self.slab_thick
 
         self.wall = [wall[0], wall[1], wall[2], wall[3], wall[4]]
@@ -1352,6 +1367,10 @@ class Create_Wall():
         self.handle_list = []
         
         self.wall_orient = None
+
+        self.wall_volume = 0
+        self.open_volume = 0
+        self.insul_volume = 0
      
     def create_wall(self): 
         wall = AllplanGeo.Polyhedron3D.CreateCuboid(self.wall[0], self.wall[1], self.wall_height)    
@@ -1367,7 +1386,7 @@ class Create_Wall():
             self.create_handle(self.wall_offset[0], self.wall_offset[1], self.orient_params1)
             self.create_handle(self.wall[3], self.wall[4], self.orient_params)
             self.create_handle(self.wall[0] + self.wall[3], self.wall[2], self.orient_params, self.wall[3])
-
+        _, self.wall_volume, _, _ = AllplanGeo.CalcMass(wall)
         self.model_ele_list.append(AllplanBasisElements.ModelElement3D(self.com_prop, wall))
 
     def create_wall_with_cent_pylon(self):
@@ -1391,6 +1410,7 @@ class Create_Wall():
             self.create_handle(self.wall[3], self.wall[4], self.orient_params)
             self.create_handle(self.wall[0] + self.wall[3], self.wall[2], self.orient_params, self.wall[3])
         wall = self.create_central_pylon(wall_list, self.fir_cent_pylon)
+        _, self.wall_volume, _, _ = AllplanGeo.CalcMass(wall)
         self.model_ele_list.append(AllplanBasisElements.ModelElement3D(self.com_prop, wall))
 
     def create_wall_with_two_cent_pylon(self):           
@@ -1420,6 +1440,7 @@ class Create_Wall():
             self.create_handle(self.wall[0] + self.wall[3], self.wall[2], self.orient_params, self.wall[3])
         wall = self.create_central_pylon(wall_list[0:2], self.fir_cent_pylon)
         wall = self.create_central_pylon([wall, wall_list[2]], self.sec_cent_pylon)
+        _, self.wall_volume, _, _ = AllplanGeo.CalcMass(wall)
         self.model_ele_list.append(AllplanBasisElements.ModelElement3D(self.com_prop, wall))
 
     def create_wall_with_three_cent_pylon(self):           
@@ -1454,7 +1475,8 @@ class Create_Wall():
             self.create_handle(self.wall[0] + self.wall[3], self.wall[2], self.orient_params, self.wall[3])
         wall = self.create_central_pylon(wall_list[0:2], self.fir_cent_pylon)
         wall = self.create_central_pylon([wall, wall_list[2]], self.sec_cent_pylon)
-        wall = self.create_central_pylon([wall, wall_list[3]], self.thi_cent_pylon) 
+        wall = self.create_central_pylon([wall, wall_list[3]], self.thi_cent_pylon)
+        _, self.wall_volume, _, _ = AllplanGeo.CalcMass(wall)
         self.model_ele_list.append(AllplanBasisElements.ModelElement3D(self.com_prop, wall))
 
     def create_left_end(self, wall):
@@ -1492,16 +1514,19 @@ class Create_Wall():
             self.fixture_elements.append(opening.create_open_group_fixture(num + fir_open[7]))
             self.create_handle(fir_open[3], fir_open[5], self.orient_params)
             self.create_handle(fir_open[3] + fir_open[1], fir_open[6], self.orient_params, fir_open[3])
+            self.open_volume += opening.open_volume
         if sec_open[0]:
             opening = Create_Opening(sec_open, self.wall[1])
             self.fixture_elements.append(opening.create_open_group_fixture(num + sec_open[7]))
             self.create_handle(sec_open[3], sec_open[5], self.orient_params)
             self.create_handle(sec_open[3] + sec_open[1], sec_open[6], self.orient_params, sec_open[3])
+            self.open_volume += opening.open_volume
         if thi_open[0]:
             opening = Create_Opening(thi_open, self.wall[1])
             self.fixture_elements.append(opening.create_open_group_fixture(num + thi_open[7]))
             self.create_handle(thi_open[3], thi_open[5], self.orient_params)
             self.create_handle(thi_open[3] + thi_open[1], thi_open[6], self.orient_params, thi_open[3])
+            self.open_volume += opening.open_volume
 
     def create_insulation(self, fir_open, sec_open, thi_open, fir_sect_wall, sec_sect_wall, wall_length, start_point, end_point, offset, insul_type, num):  
         insul_list = []
@@ -1671,11 +1696,18 @@ class Create_Wall():
         if sec_sect_wall[0]:
             self.create_handle(sec_sect_wall[2], sec_sect_wall[3], self.orient_params)
 
+        self.insul_volume = self.insul_volume + fir_ver_insulation.insul_volume + sec_ver_insulation.insul_volume + thi_ver_insulation.insul_volume + fou_ver_insulation.insul_volume + fif_ver_insulation.insul_volume + six_ver_insulation.insul_volume + \
+                            fir_low_hor_insulation.insul_volume + sec_low_hor_insulation.insul_volume + thi_low_hor_insulation.insul_volume + fir_up_hor_insulation.insul_volume + sec_up_hor_insulation.insul_volume + thi_up_hor_insulation.insul_volume
+
     def create_handle(self, handle_end_point, handle_name, orient_params, handle_origin_point=0):
         origin = AllplanGeo.Point3D(handle_origin_point * m.cos(m.radians(orient_params[3])) + orient_params[1], handle_origin_point * m.sin(m.radians(orient_params[3])) + orient_params[2], 0)
         end = AllplanGeo.Point3D(handle_end_point * m.cos(m.radians(orient_params[3])) + orient_params[1], handle_end_point * m.sin(m.radians(orient_params[3])) + orient_params[2], 0)
         handle = HandleProperties(str(handle_name), end, origin, [(handle_name, orient_params[0])], orient_params[0], True)
         self.handle_list.append(handle)
+
+    def calculate_mass(self):
+        wall_mass = ((self.wall_volume - self.open_volume - self.insul_volume) * 2.500 + self.insul_volume * 0.13) / 1000000000
+        return wall_mass
 
 
 class Create_Edge():
@@ -1872,7 +1904,6 @@ class Create_Pylon():
 
         com_prop = AllplanBaseElements.CommonProperties()
         com_prop.GetGlobalProperties()
-        com_prop.Layer = 3717
         color = AllplanBasisElements.ARGB (0, 0, 0, 0)
         props = AllplanBasisElements.FillingProperties()
         props.FirstColor = color
@@ -2019,6 +2050,8 @@ class Create_Opening():
         self.open_x_posit = opening[3]
         self.open_z_posit = opening[4]   
         self.wall_thick = wall_thick
+
+        self.open_volume = self.open_width * self.open_height * self.wall_thick
         
         self.com_prop = AllplanBaseElements.CommonProperties()
         self.com_prop.GetGlobalProperties()
@@ -2265,11 +2298,12 @@ class Create_Insulation():
         self.ver_rib_thick = ver_rib_thick
         self.start_point = start_point
         self.z_start_point = z_start_point
+
+        self.insul_volume = 0
  
         self.com_prop = AllplanBaseElements.CommonProperties()
         self.com_prop.GetGlobalProperties()
         self.com_prop.ColorByLayer = False
-        self.com_prop.ActiveBackground = True
         self.com_prop.Layer = 3922
         self.com_prop.Pen = 7 
         self.com_prop.Color = 4
@@ -2304,6 +2338,10 @@ class Create_Insulation():
         insul_list1 = self.insul_support_func(self.insul[0], self.insul[1], num_x_step, num_z_step, x_resid, z_resid, 0, 1, insul_type, n, m, l)
         insul_list2 = self.insul_support_func(self.insul[0], self.insul[1], num_x_step, num_z_step, x_resid, z_resid, 0, 2, insul_type, n, m, l)
         line_list = self.insul_support_func(self.insul[0], self.insul[1], num_x_step, num_z_step, x_resid, z_resid, 0, 3, insul_type, n, m, l)
+
+        for insul in insul_list2:
+            _, insul_volume, _, _ = AllplanGeo.CalcMass(insul)
+            self.insul_volume += insul_volume
 
         for insul1, insul2, line in zip(insul_list1, insul_list2, line_list):
             insul_fix_list.append(self.create_insul_group_fixture(insul1, insul2, line, num))
@@ -2348,6 +2386,10 @@ class Create_Insulation():
         insul_list1 = self.insul_support_func(self.insul[1], self.insul[0], num_x_step, num_z_step, x_resid, z_resid, x_offset, 1, insul_type, n, m, l)
         insul_list2 = self.insul_support_func(self.insul[1], self.insul[0], num_x_step, num_z_step, x_resid, z_resid, x_offset, 2, insul_type, n, m, l)
         line_list = self.insul_support_func(self.insul[1], self.insul[0], num_x_step, num_z_step, x_resid, z_resid, x_offset, 3, insul_type, n, m, l)
+
+        for insul in insul_list2:
+            _, insul_volume, _, _ = AllplanGeo.CalcMass(insul)
+            self.insul_volume += insul_volume
 
         for insul1, insul2, line in zip(insul_list1, insul_list2, line_list):
             insul_fix_list.append(self.create_insul_group_fixture(insul1, insul2, line, num))
@@ -2401,7 +2443,7 @@ class Create_Insulation():
             point1 = AllplanGeo.Point3D(0, 0, 0)
             point2 = AllplanGeo.Point3D(0, insul_thick, 0)
             insul3 = AllplanGeo.Line3D(point1, point2)
-
+        
         if type == 1:
             insul4 = AllplanGeo.Polygon3D()
             insul4 += AllplanGeo.Point3D(0, insul_thick, 0)
@@ -2416,14 +2458,16 @@ class Create_Insulation():
             point2 = AllplanGeo.Point3D(0, insul_thick, 0)
             insul4 = AllplanGeo.Line3D(point1, point2)
 
-        for i in range(0, int(num_x_step)):
-            for j in range(0, int(num_z_step)):                
-                insul_i = AllplanGeo.Move(insul1, AllplanGeo.Vector3D(self.start_point +  l * i * (insul_width + self.ver_rib_thick) + n + x_offset,
-                                                                      y_offset, self.z_start_point + j * (insul_height + self.hor_rib_thick)))
-                insul_list.append(insul_i)      
-            insul_i = AllplanGeo.Move(insul2, AllplanGeo.Vector3D(self.start_point + l * i * (insul_width + self.ver_rib_thick) + n + x_offset,
-                                                                  y_offset, self.z_start_point + num_z_step * (insul_height + self.hor_rib_thick)))
-            insul_list.append(insul_i)
+        if z_resid >= self.insul[3]:
+            for i in range(0, int(num_x_step)):
+                for j in range(0, int(num_z_step)):                
+                    insul_i = AllplanGeo.Move(insul1, AllplanGeo.Vector3D(self.start_point +  l * i * (insul_width + self.ver_rib_thick) + n + x_offset,
+                                                                          y_offset, self.z_start_point + j * (insul_height + self.hor_rib_thick)))
+                    insul_list.append(insul_i)      
+            
+                insul_i = AllplanGeo.Move(insul2, AllplanGeo.Vector3D(self.start_point + l * i * (insul_width + self.ver_rib_thick) + n + x_offset,
+                                                                        y_offset, self.z_start_point + num_z_step * (insul_height + self.hor_rib_thick)))
+                insul_list.append(insul_i)
 
         if x_resid >= self.insul[3] and z_resid >= self.insul[3]:
             for i in range(0, int(num_z_step)):
